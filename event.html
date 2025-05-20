@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusMate</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Anime.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a;
+            color: #e5e7eb;
+        }
+
+        .event-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .filter-active {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .no-results {
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-gray-900 p-6 shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-blue-400">FocusMate</h1>
+            <div class="flex items-center space-x-4">
+                <input type="text" id="searchInput" placeholder="Search events..."
+                    class="bg-gray-800 text-white p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="toggleMode" class="bg-gray-700 p-2 rounded-lg hover:bg-gray-600">
+                    Toggle Light/Dark
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Filters -->
+    <section class="max-w-7xl mx-auto py-6 px-4">
+        <div class="flex flex-wrap gap-4">
+            <button class="filter-btn px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700" data-type="all">All</button>
+            <button class="filter-btn px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                data-type="Scholarship">Scholarship</button>
+            <button class="filter-btn px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                data-type="Olympiad">Olympiad</button>
+            <button class="filter-btn px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                data-type="Coding Contest">Coding</button>
+            <button class="filter-btn px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                data-type="Science Fair">Science Fair</button>
+            <button class="filter-btn px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                data-type="Hackathon">Hackathon</button>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 px-4 flex-grow">
+        <div id="eventList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <p id="noResults" class="text-center text-gray-400 mt-6 no-results">No events found.</p>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 p-4 text-center">
+        <p class="text-gray-400">© 2025 Events Platform. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Load JSON data
+        async function loadEvents() {
+            try {
+                const response = await fetch('events.json');
+                if (!response.ok) throw new Error(`Failed to load events data: ${response.statusText}`);
+                const data = await response.json();
+                if (!data.exams || !data.fairs) throw new Error('Invalid JSON structure: missing exams or fairs');
+                return [...data.exams, ...data.fairs];
+            } catch (error) {
+                console.error('Error loading events:', error);
+                const noResults = document.getElementById('noResults');
+                noResults.textContent = `Error loading events: ${error.message}. Please try again later.`;
+                noResults.style.opacity = '1';
+                return [];
+            }
+        }
+
+        // Render events with Anime.js animations
+        function renderEvents(events) {
+            const eventList = document.getElementById('eventList');
+            eventList.innerHTML = '';
+            const noResults = document.getElementById('noResults');
+
+            if (events.length === 0) {
+                noResults.textContent = 'No events found.';
+                anime({
+                    targets: noResults,
+                    opacity: 1,
+                    duration: 500,
+                    easing: 'easeInOutQuad'
+                });
+                return;
+            }
+
+            noResults.style.opacity = '0';
+
+            events.forEach(event => {
+                const card = document.createElement('div');
+                card.className = 'event-card bg-gray-800 p-6 rounded-lg shadow-lg';
+                card.innerHTML = `
+                    <h2 class="text-xl font-semibold text-blue-400">${event.name}</h2>
+                    <p class="text-gray-400 mt-2"><strong>Date:</strong> ${event.date}</p>
+                    <p class="text-gray-400"><strong>Type:</strong> ${event.type}</p>
+                    <p class="text-gray-400"><strong>Eligibility:</strong> ${event.eligibility}</p>
+                    <p class="text-gray-400"><strong>Benefits:</strong> ${event.benefits}</p>
+                    <p class="text-gray-400"><strong>Ease:</strong> ${event.ease}</p>
+                    <a href="${event.apply}" target="_blank" 
+                       class="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        Apply Now
+                    </a>
+                    <button class="details-btn mt-2 text-blue-400 hover:underline" 
+                            data-details="${encodeURIComponent(JSON.stringify(event))}">
+                        View Details
+                    </button>
+                `;
+                eventList.appendChild(card);
+
+                // Animate card entrance
+                anime({
+                    targets: card,
+                    translateY: [50, 0],
+                    opacity: [0, 1],
+                    scale: [0.9, 1],
+                    duration: 800,
+                    easing: 'easeOutElastic(1, 0.8)',
+                    delay: anime.stagger(100)
+                });
+            });
+
+            // Add details button listeners
+            document.querySelectorAll('.details-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const details = JSON.parse(decodeURIComponent(btn.dataset.details));
+                    showDetailsModal(details);
+                });
+            });
+        }
+
+        // Details modal with Anime.js
+        function showDetailsModal(event) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-gray-900 p-8 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                    <h2 class="text-2xl font-bold text-blue-400">${event.name}</h2>
+                    <p class="text-gray-300 mt-4">${event.details}</p>
+                    <p class="text-gray-400 mt-2"><strong>Application Process:</strong> ${event.applicationProcess}</p>
+                    <p class="text-gray-400"><strong>Required Documents:</strong> ${event.requiredDocuments}</p>
+                    <p class="text-gray-400"><strong>Selection Criteria:</strong> ${event.selectionCriteria}</p>
+                    <p class="text-gray-400"><strong>Preparation Tips:</strong> ${event.preparationTips}</p>
+                    <p class="text-gray-400"><strong>Additional Info:</strong> ${event.additionalInfo}</p>
+                    <button class="close-modal mt-6 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                        Close
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Animate modal entrance
+            anime({
+                targets: modal.querySelector('div'),
+                scale: [0, 1],
+                opacity: [0, 1],
+                duration: 500,
+                easing: 'easeOutBounce'
+            });
+
+            modal.querySelector('.close-modal').addEventListener('click', () => {
+                anime({
+                    targets: modal.querySelector('div'),
+                    scale: [1, 0],
+                    opacity: [1, 0],
+                    duration: 300,
+                    easing: 'easeInQuad',
+                    complete: () => modal.remove()
+                });
+            });
+        }
+
+        // Initialize page
+        async function init() {
+            const events = await loadEvents();
+            let filteredEvents = events;
+
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', () => {
+                const query = searchInput.value.toLowerCase();
+                filteredEvents = events.filter(event =>
+                    event.name.toLowerCase().includes(query) ||
+                    event.type.toLowerCase().includes(query) ||
+                    event.details.toLowerCase().includes(query)
+                );
+                renderEvents(filteredEvents);
+            });
+
+            // Filter functionality
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('filter-active'));
+                    btn.classList.add('filter-active');
+                    const type = btn.dataset.type;
+                    filteredEvents = type === 'all' ? events : events.filter(event => event.type.includes(type));
+                    renderEvents(filteredEvents);
+                });
+            });
+
+            // Dark/Light mode toggle
+            const toggleMode = document.getElementById('toggleMode');
+            toggleMode.addEventListener('click', () => {
+                document.body.classList.toggle('light-mode');
+                if (document.body.classList.contains('light-mode')) {
+                    document.body.style.backgroundColor = '#f3f4f6';
+                    document.body.style.color = '#1f2937';
+                    document.querySelectorAll('.event-card').forEach(card => {
+                        card.style.backgroundColor = '#ffffff';
+                        card.style.color = '#1f2937';
+                    });
+                    document.querySelectorAll('.bg-gray-800').forEach(el => {
+                        el.classList.remove('bg-gray-800');
+                        el.classList.add('bg-gray-200');
+                    });
+                    document.querySelectorAll('.bg-gray-900').forEach(el => {
+                        el.classList.remove('bg-gray-900');
+                        el.classList.add('bg-gray-100');
+                    });
+                } else {
+                    document.body.style.backgroundColor = '#1a1a1a';
+                    document.body.style.color = '#e5e7eb';
+                    document.querySelectorAll('.event-card').forEach(card => {
+                        card.style.backgroundColor = '#1f2937';
+                        card.style.color = '#e5e7eb';
+                    });
+                    document.querySelectorAll('.bg-gray-200').forEach(el => {
+                        el.classList.remove('bg-gray-200');
+                        el.classList.add('bg-gray-800');
+                    });
+                    document.querySelectorAll('.bg-gray-100').forEach(el => {
+                        el.classList.remove('bg-gray-100');
+                        el.classList.add('bg-gray-900');
+                    });
+                }
+            });
+
+            // Initial render
+            renderEvents(events);
+
+            // Animate header
+            anime({
+                targets: 'header',
+                translateY: [-50, 0],
+                opacity: [0, 1],
+                duration: 1000,
+                easing: 'easeOutQuad'
+            });
+        }
+
+        // Run initialization
+        init();
+    </script>
+</body>
+
+</html>
